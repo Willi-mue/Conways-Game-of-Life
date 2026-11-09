@@ -19,8 +19,10 @@ from pyglet.graphics.shader import Shader, ShaderProgram
 from pyglet.window import key, mouse
 
 import hashlife as hl
+import i18n
 import life
 import ui
+from i18n import fmt_int, tr
 from gpu_life import FULLSCREEN_VERT, GpuLife, fullscreen_quad
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -125,13 +127,17 @@ void main() {
 # name: (background, trail far, trail near, alive)
 THEMES = {
     "neon":    ((0.020, 0.025, 0.060), (0.10, 0.05, 0.35), (0.00, 0.80, 1.00), (0.90, 1.00, 1.00)),
-    "glut":    ((0.040, 0.012, 0.010), (0.30, 0.02, 0.08), (1.00, 0.45, 0.05), (1.00, 0.96, 0.75)),
+    "ember":   ((0.040, 0.012, 0.010), (0.30, 0.02, 0.08), (1.00, 0.45, 0.05), (1.00, 0.96, 0.75)),
     "matrix":  ((0.005, 0.030, 0.010), (0.00, 0.12, 0.05), (0.10, 0.85, 0.35), (0.85, 1.00, 0.85)),
-    "pastell": ((0.960, 0.950, 0.930), (0.85, 0.80, 0.95), (0.95, 0.55, 0.65), (0.20, 0.22, 0.35)),
-    "klassik": ((0.000, 0.000, 0.000), (0.00, 0.00, 0.00), (0.00, 0.00, 0.00), (1.00, 1.00, 1.00)),
+    "pastel":  ((0.960, 0.950, 0.930), (0.85, 0.80, 0.95), (0.95, 0.55, 0.65), (0.20, 0.22, 0.35)),
+    "classic": ((0.000, 0.000, 0.000), (0.00, 0.00, 0.00), (0.00, 0.00, 0.00), (1.00, 1.00, 1.00)),
 }
 
-FIELD, INFINITE = "feld", "unendlich"
+# German names still accepted on the command line
+THEME_ALIASES = {"glut": "ember", "pastell": "pastel", "klassik": "classic"}
+VIEW_ALIASES = {"einzeln": "single", "kacheln": "tiles"}
+
+FIELD, INFINITE = "field", "infinite"
 MAX_ZOOM = 64.0
 MIN_ZOOM = {FIELD: 0.25, INFINITE: 2.0 ** -60}
 MIN_GPS = 1
@@ -141,11 +147,6 @@ MAX_CELL = 32
 DENSITY_STEP = 0.05
 FADE_FRAMES = 150                 # frames to keep drawing after a pause so trails can fade out
 HASHLIFE_CACHE_LIMIT = 4_000_000  # memoised nodes before the caches are dropped
-
-
-def fmt_int(n):
-    """1234567 -> '1.234.567', huge numbers in scientific notation."""
-    return f"{n:,}".replace(",", ".") if n < 10 ** 12 else f"{n:.2e}".replace("e+", "·10^").replace(".", ",")
 
 
 def fmt_zoom(z):
@@ -185,9 +186,9 @@ class GameOfLife(pyglet.window.Window):
         self._last_cell = None         # for drawing continuous lines with the mouse
         self.theme_names = list(THEMES)
         self.theme = self.theme_names.index(args.theme)
-        self.tiled = args.view == "kacheln"
+        self.tiled = args.view == "tiles"
         self.pattern_names = list(hl.PATTERNS)
-        self.pattern_index = self.pattern_names.index("Acorn")
+        self.pattern_index = self.pattern_names.index("acorn")
 
         # HashLife universe + the raster texture that shows it
         self.root = hl.empty(3)
@@ -241,44 +242,53 @@ class GameOfLife(pyglet.window.Window):
     def build_menu(self):
         b, t = ui.button, ui.text
         rows = [
-            ("Modus", [b("Feld (GPU)", lambda: self.set_mode(FIELD), lambda: self.mode == FIELD),
-                       b("Unendlich", lambda: self.set_mode(INFINITE), lambda: self.mode == INFINITE)]),
+            (tr("row.mode"), [b(tr("mode.field"), lambda: self.set_mode(FIELD), lambda: self.mode == FIELD),
+                              b(tr("mode.infinite"), lambda: self.set_mode(INFINITE), lambda: self.mode == INFINITE)]),
         ]
         if self.mode == FIELD:
-            rows.append(("Ansicht", [b("Einzeln", lambda: self.set_view(False), lambda: not self.tiled),
-                                     b("Kacheln", lambda: self.set_view(True), lambda: self.tiled)]))
+            rows.append((tr("row.view"), [b(tr("view.single"), lambda: self.set_view(False), lambda: not self.tiled),
+                                          b(tr("view.tiles"), lambda: self.set_view(True), lambda: self.tiled)]))
         rows += [
-            ("Thema", [b("‹", lambda: self.cycle_theme(-1), weight=0.6),
-                       t(lambda: self.theme_names[self.theme].capitalize(), weight=2),
-                       b("›", lambda: self.cycle_theme(1), weight=0.6)]),
-            ("Tempo", [b("–", lambda: self.change_speed(0.5), weight=0.6),
-                       t(lambda: f"{fmt_int(self.gps[self.mode])} Gen/s", weight=2),
-                       b("+", lambda: self.change_speed(2), weight=0.6)]),
+            (tr("row.theme"), [b("‹", lambda: self.cycle_theme(-1), weight=0.6),
+                               t(lambda: self.theme_label(), weight=2),
+                               b("›", lambda: self.cycle_theme(1), weight=0.6)]),
+            (tr("row.speed"), [b("–", lambda: self.change_speed(0.5), weight=0.6),
+                               t(lambda: tr("gens_per_s", n=fmt_int(self.gps[self.mode])), weight=2),
+                               b("+", lambda: self.change_speed(2), weight=0.6)]),
         ]
         if self.mode == FIELD:
             rows += [
-                ("Dichte", [b("–", lambda: self.change_density(-1), weight=0.6),
-                            t(lambda: f"{self.density:.0%}", weight=0.9),
-                            b("+", lambda: self.change_density(1), weight=0.6),
-                            b("Zufall", self.use_random_density, lambda: self.fixed_density is None, weight=1.2)]),
-                ("Zellgröße", [b("–", lambda: self.set_cell_size(self.cell // 2 if self.cell > 1 else 1), weight=0.6),
-                               t(lambda: f"{self.cell} px", weight=2),
-                               b("+", lambda: self.set_cell_size(self.cell * 2), weight=0.6)]),
+                (tr("row.density"), [b("–", lambda: self.change_density(-1), weight=0.6),
+                                     t(lambda: f"{self.density:.0%}", weight=0.9),
+                                     b("+", lambda: self.change_density(1), weight=0.6),
+                                     b(tr("density.random"), self.use_random_density,
+                                       lambda: self.fixed_density is None, weight=1.2)]),
+                (tr("row.cell"), [b("–", lambda: self.set_cell_size(self.cell // 2 if self.cell > 1 else 1), weight=0.6),
+                                  t(lambda: f"{self.cell} px", weight=2),
+                                  b("+", lambda: self.set_cell_size(self.cell * 2), weight=0.6)]),
             ]
         rows += [
-            ("Muster", [b("‹", lambda: self.cycle_pattern(-1), weight=0.6),
-                        t(lambda: self.pattern_names[self.pattern_index], weight=2.2),
-                        b("›", lambda: self.cycle_pattern(1), weight=0.6),
-                        b("Setzen", self.place_pattern, weight=1.3)]),
-            ("Info", [b("An", lambda: self.set_hud(True), lambda: self.show_hud),
-                      b("Aus", lambda: self.set_hud(False), lambda: not self.show_hud)]),
-            (None, [b(lambda: "Weiter" if self.paused else "Pause", self.toggle_pause),
-                    b("Neu", self.reset), b("Leeren", lambda: self.reset(empty=True))]),
-            (None, [b("Alles zeigen", self.fit_all),
-                    b(lambda: "Fenster" if self.fullscreen else "Vollbild", self.toggle_fullscreen),
-                    b("Beenden", self.close)]),
+            (tr("row.pattern"), [b("‹", lambda: self.cycle_pattern(-1), weight=0.6),
+                                 t(lambda: self.pattern_label(), weight=2.2),
+                                 b("›", lambda: self.cycle_pattern(1), weight=0.6),
+                                 b(tr("pattern.place"), self.place_pattern, weight=1.3)]),
+            (tr("row.info"), [b(tr("on"), lambda: self.set_hud(True), lambda: self.show_hud),
+                              b(tr("off"), lambda: self.set_hud(False), lambda: not self.show_hud)]),
+            (tr("row.language"), [b("Deutsch", lambda: self.set_language("de"), lambda: i18n.language() == "de"),
+                                  b("English", lambda: self.set_language("en"), lambda: i18n.language() == "en")]),
+            (None, [b(lambda: tr("resume") if self.paused else tr("pause"), self.toggle_pause),
+                    b(tr("new"), self.reset), b(tr("clear"), lambda: self.reset(empty=True))]),
+            (None, [b(tr("fit"), self.fit_all),
+                    b(lambda: tr("windowed") if self.fullscreen else tr("fullscreen"), self.toggle_fullscreen),
+                    b(tr("quit"), self.close)]),
         ]
-        return ui.Menu("Einstellungen", rows)
+        return ui.Menu(tr("menu.title"), rows, opener_text=tr("menu.open"))
+
+    def theme_label(self):
+        return tr(f"theme.{self.theme_names[self.theme]}")
+
+    def pattern_label(self):
+        return tr(f"pattern.{self.pattern_names[self.pattern_index]}")
 
     # --- actions (menu and keyboard) ----------------------------------------------------------
 
@@ -294,6 +304,12 @@ class GameOfLife(pyglet.window.Window):
         elif self.saved_view.get(mode):
             self.zoom, self.offset = self.saved_view[mode][0], list(self.saved_view[mode][1])
         self.clamp_view()
+        self.rebuild_menu()
+        self.update_hud()
+        self.changed()
+
+    def set_language(self, lang):
+        i18n.set_language(lang)
         self.rebuild_menu()
         self.update_hud()
         self.changed()
@@ -439,17 +455,19 @@ class GameOfLife(pyglet.window.Window):
     # --- HUD ---------------------------------------------------------------------------------
 
     def update_hud(self, _dt=None):
-        status = "PAUSE" if self.paused else f"{fmt_int(self.gps[self.mode])} Gen/s"
+        status = tr("hud.paused") if self.paused else tr("gens_per_s", n=fmt_int(self.gps[self.mode]))
+        sep = "   ·   "
         if self.mode == FIELD:
-            content = "Muster" if self.density == 0 else f"Dichte {self.density:.0%}"
-            line2 = (f"Feld {self.sim.width}×{self.sim.height}   ·   {content}   ·   "
-                     f"Zoom {fmt_zoom(self.zoom / self.home_zoom)}   ·   Ansicht {'Kacheln' if self.tiled else 'einzeln'}")
+            content = tr("hud.pattern_placed") if self.density == 0 else tr("hud.density", p=f"{self.density:.0%}")
+            view = tr("view.tiles") if self.tiled else tr("view.single")
+            line2 = sep.join([tr("hud.field", w=self.sim.width, h=self.sim.height), content,
+                              tr("hud.zoom", z=fmt_zoom(self.zoom / self.home_zoom)), tr("hud.view", name=view)])
         else:
-            line2 = (f"Unendlich (HashLife)   ·   {fmt_int(self.root.n)} Zellen   ·   "
-                     f"Zoom {fmt_zoom(self.zoom)}   ·   Muster {self.pattern_names[self.pattern_index]}")
-        text = (f"Generation {fmt_int(self.generation[self.mode])}   ·   {status}   ·   "
-                f"Thema {self.theme_names[self.theme]}\n{line2}\n"
-                "M Menü · Leertaste Pause · R Neu · A Alles zeigen · Maus Zeichnen · Mausrad Zoom · H Ausblenden")
+            line2 = sep.join([tr("hud.infinite"), tr("hud.cells", n=fmt_int(self.root.n)),
+                              tr("hud.zoom", z=fmt_zoom(self.zoom)), tr("hud.pattern", name=self.pattern_label())])
+        line1 = sep.join([tr("hud.generation", n=fmt_int(self.generation[self.mode])), status,
+                          tr("hud.theme", name=self.theme_label())])
+        text = f"{line1}\n{line2}\n{tr('hud.keys')}"
         if text != self.hud.text:
             self.hud.text = text
             self.layout_hud()
@@ -723,44 +741,60 @@ def parse_size(text):
     try:
         w, h = (int(v) for v in text.lower().split("x"))
     except ValueError:
-        raise argparse.ArgumentTypeError("Format: BREITExHÖHE, z.B. 1920x1080")
+        raise argparse.ArgumentTypeError("format: WIDTHxHEIGHT, e.g. 1920x1080")
     if w <= 0 or h <= 0:
-        raise argparse.ArgumentTypeError("Breite und Höhe müssen > 0 sein")
+        raise argparse.ArgumentTypeError("width and height must be > 0")
     return w, h
 
 
 def parse_density(text):
     value = float(text)
     if not 0.0 <= value <= 1.0:
-        raise argparse.ArgumentTypeError("Dichte muss zwischen 0 und 1 liegen")
+        raise argparse.ArgumentTypeError("density must be between 0 and 1")
     return value
+
+
+def parse_theme(text):
+    name = THEME_ALIASES.get(text.lower(), text.lower())
+    if name not in THEMES:
+        raise argparse.ArgumentTypeError(f"choose from {', '.join(THEMES)}")
+    return name
+
+
+def parse_view(text):
+    name = VIEW_ALIASES.get(text.lower(), text.lower())
+    if name not in ("single", "tiles"):
+        raise argparse.ArgumentTypeError("choose from single, tiles")
+    return name
 
 
 def parse_args(argv=None):
     lo, hi = life.DENSITY_RANGE
     p = argparse.ArgumentParser(description="Conway's Game of Life (GPU/OpenGL + HashLife)")
     p.add_argument("--density", type=parse_density, default=None,
-                   help=f"Startdichte 0..1 (Standard: bei jedem Reset zufällig zwischen {lo:.0%}% und {hi:.0%}%)")
+                   help=f"start density 0..1 (default: random between {lo:.0%}% and {hi:.0%}% on every reset)")
     p.add_argument("--speed", type=int, default=60,
-                   help=f"Generationen pro Sekunde, {MIN_GPS}..{MAX_GPS[FIELD]} (Standard: 60)")
+                   help=f"generations per second, {MIN_GPS}..{MAX_GPS[FIELD]} (default: 60)")
     p.add_argument("--cell", type=int, default=1,
-                   help="Zellgröße in Bildschirmpixeln; das Feld füllt den Bildschirm (Standard: 1)")
+                   help="cell size in screen pixels; the field still fills the screen (default: 1)")
     p.add_argument("--grid", type=parse_size, default=None,
-                   help="Feldgröße in Zellen, überschreibt --cell (Standard: Bildschirmauflösung / Zellgröße)")
+                   help="field size in cells, overrides --cell (default: screen resolution / cell size)")
     p.add_argument("--window", type=parse_size, default=None,
-                   help="im Fenster statt im Vollbild starten, Größe BREITExHÖHE")
-    p.add_argument("--screen", type=int, default=None,
-                   help="Nummer des Bildschirms (Standard: Hauptbildschirm)")
-    p.add_argument("--theme", choices=list(THEMES), default="neon", help="Farbthema (Standard: neon)")
-    p.add_argument("--view", choices=["einzeln", "kacheln"], default="einzeln",
-                   help="einzeln = Feld nur einmal, Zoom bis Feldgröße; kacheln = Feld wiederholt sich "
-                        "(Standard: einzeln, umschalten mit K)")
-    p.add_argument("--hud", action="store_true", help="Info-Anzeige beim Start einblenden (Standard: aus, umschalten mit H)")
-    p.add_argument("--seed", type=int, default=None, help="Zufalls-Seed für reproduzierbare Starts")
+                   help="start in a window of WIDTHxHEIGHT instead of fullscreen")
+    p.add_argument("--screen", type=int, default=None, help="monitor number (default: primary monitor)")
+    p.add_argument("--theme", type=parse_theme, default="neon", metavar="{" + ",".join(THEMES) + "}",
+                   help="colour theme (default: neon)")
+    p.add_argument("--view", type=parse_view, default="single", metavar="{single,tiles}",
+                   help="single = field shown once; tiles = field repeats (default: single, toggle with K)")
+    p.add_argument("--lang", choices=i18n.LANGUAGES, default=None,
+                   help="interface language (default: from the system language)")
+    p.add_argument("--hud", action="store_true", help="show the info overlay at start (default: off, toggle with H)")
+    p.add_argument("--seed", type=int, default=None, help="random seed for reproducible fields")
     args = p.parse_args(argv)
     args.speed = min(max(args.speed, MIN_GPS), MAX_GPS[FIELD])
     args.cell = max(args.cell, 1)
     args.fullscreen = args.window is None
+    i18n.set_language(args.lang or i18n.detect_language())
     return args
 
 
@@ -770,7 +804,7 @@ def pick_screen(index):
     if index is None:
         return display.get_default_screen()
     if not 0 <= index < len(screens):
-        raise SystemExit(f"Bildschirm {index} gibt es nicht (verfügbar: 0..{len(screens) - 1})")
+        raise SystemExit(f"monitor {index} does not exist (available: 0..{len(screens) - 1})")
     return screens[index]
 
 

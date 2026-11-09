@@ -26,7 +26,7 @@ def test_matches_numpy_on_random_soup(generations):
 
 
 def test_advance_in_pieces_equals_advance_at_once():
-    root = hl.from_cells(hl.pattern("R-Pentomino"))
+    root = hl.from_cells(hl.pattern("r-pentomino"))
     a = hl.advance(hl.advance(hl.advance(root, 100), 23), 377)
     b = hl.advance(root, 500)
     assert a.n == b.n
@@ -34,10 +34,10 @@ def test_advance_in_pieces_equals_advance_at_once():
 
 
 @pytest.mark.parametrize("name, generations, population", [
-    ("Diehard", 129, None),            # still alive one generation before the end
-    ("Diehard", 130, 0),               # dies after exactly 130 generations
-    ("R-Pentomino", 1103, 116),        # stabilises at 116 cells
-    ("Acorn", 5206, 633),              # stabilises at 633 cells
+    ("diehard", 129, None),            # still alive one generation before the end
+    ("diehard", 130, 0),               # dies after exactly 130 generations
+    ("r-pentomino", 1103, 116),        # stabilises at 116 cells
+    ("acorn", 5206, 633),              # stabilises at 633 cells
 ])
 def test_known_pattern_facts(name, generations, population):
     root = hl.advance(hl.from_cells(hl.pattern(name)), generations)
@@ -48,7 +48,7 @@ def test_known_pattern_facts(name, generations, population):
 
 
 def test_glider_gun_adds_one_glider_every_30_generations():
-    root = hl.from_cells(hl.pattern("Glider-Kanone"))
+    root = hl.from_cells(hl.pattern("glider-gun"))
     assert root.n == 36
     pops = [hl.advance(root, 300 + 30 * i).n for i in range(4)]
     assert [b - a for a, b in zip(pops, pops[1:])] == [5, 5, 5]
@@ -56,7 +56,7 @@ def test_glider_gun_adds_one_glider_every_30_generations():
 
 def test_huge_jump_is_fast():
     # a glider after one trillion generations: 2^40 / 4 cells diagonally away, still 5 cells
-    root = hl.advance(hl.from_cells(hl.pattern("Glider")), 1 << 40)
+    root = hl.advance(hl.from_cells(hl.pattern("glider")), 1 << 40)
     assert root.n == 5
     x0, y0, x1, y1 = hl.bounding_box(root)
     assert x1 - x0 == 3 and y1 - y0 == 3

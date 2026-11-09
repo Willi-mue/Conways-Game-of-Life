@@ -17,6 +17,7 @@
 - [x] Bildschirmerkennung: Vollbild auf Bildschirmauflösung, Feld = Auflösung / `--cell`, `--screen` für Mehrmonitor
 - [x] Zwei Ansichten (`K` / `--view`): „einzeln“ (Feld einmal, Zoom bis Feldgröße, kein Verschieben über den Rand) und „Kacheln“
 - [x] App-Identität unter Windows (eigene Taskleisten-Gruppe), Icon in allen Größen, `create_shortcut.ps1`
+- [x] Oberfläche auf Deutsch und Englisch (`i18n.py`, Menü „Sprache“, `--lang`), englische IDs für Themen/Ansichten/Muster (deutsche Startoptionen gehen weiter)
 - [x] Einstellungsmenü im Spiel (`M`): Ansicht, Thema, Tempo, Dichte, Zellgröße, Info, Pause/Neu/Leeren, Vollbild, Beenden
 - [x] Optik: Farbthemen (`T`), Nachleucht-Spuren, abgerundete Zellen beim Zoomen, Vignette, Info-Anzeige (`H`)
 - [x] Bildwiederholung nur bei Bedarf: pausiert 0 Bilder/s, ~0–1 % CPU (vorher wurde dauerhaft neu gezeichnet)

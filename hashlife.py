@@ -280,15 +280,15 @@ def parse_rle(text: str) -> np.ndarray:
 
 
 PATTERNS = {
-    # name: (RLE, description)
-    "Acorn": ("bo$3bo$2o2b3o!", "7 Zellen, wächst 5206 Generationen lang"),
-    "R-Pentomino": ("b2o$2o$bo!", "5 Zellen, chaotisch für 1103 Generationen"),
-    "Glider-Kanone": ("24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o$2o8bo3bob2o4bobo$"
-                      "10bo5bo7bo$11bo3bo$12b2o!", "Gosper: schießt alle 30 Generationen einen Glider"),
-    "Diehard": ("6bo$2o$bo3b3o!", "stirbt nach genau 130 Generationen"),
-    "Glider": ("bo$2bo$3o!", "kleinstes Raumschiff"),
+    # id: RLE   (display names are in i18n.py as "pattern.<id>")
+    "acorn": "bo$3bo$2o2b3o!",                         # 7 cells, grows for 5206 generations
+    "r-pentomino": "b2o$2o$bo!",                       # 5 cells, chaotic for 1103 generations
+    "glider-gun": ("24bo$22bobo$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o$2o8bo3bob2o4bobo$"
+                   "10bo5bo7bo$11bo3bo$12b2o!"),       # Gosper: one glider every 30 generations
+    "diehard": "6bo$2o$bo3b3o!",                       # dies after exactly 130 generations
+    "glider": "bo$2bo$3o!",                            # the smallest spaceship
 }
 
 
-def pattern(name: str) -> np.ndarray:
-    return parse_rle(PATTERNS[name][0])
+def pattern(pattern_id: str) -> np.ndarray:
+    return parse_rle(PATTERNS[pattern_id])

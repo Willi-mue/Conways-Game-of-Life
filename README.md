@@ -27,7 +27,7 @@ generations while the view keeps zooming out:
 
 ![HashLife: glider gun over a million generations](pics/hashlife.gif)
 
-Built-in patterns (menu → **Muster**): Acorn, R-Pentomino, Gosper glider gun, Diehard, Glider.
+Built-in patterns (menu → **Pattern**): Acorn, R-pentomino, Gosper glider gun, Diehard, Glider.
 They work in both modes. HashLife is fastest on regular patterns. Chaotic phases, such as Acorn's
 first 5,000 generations, take noticeably longer.
 
@@ -35,14 +35,14 @@ first 5,000 generations, take noticeably longer.
 
 ![The four colour themes](pics/themes.png)
 
-There is also `klassik`, plain black and white. The field is a torus: cells leaving one edge come
+There is also `classic`, plain black and white. The field is a torus: cells leaving one edge come
 back on the opposite edge. There are two views:
 
 ![Single view and tiled view](pics/views.png)
 
-- **Einzeln** (default): the field is shown once with a frame. You can zoom out only until the
+- **Single** (default): the field is shown once with a frame. You can zoom out only until the
   whole field fits.
-- **Kacheln**: the field repeats endlessly in every direction.
+- **Tiles**: the field repeats endlessly in every direction.
 
 ## Installation
 
@@ -73,8 +73,9 @@ powershell -ExecutionPolicy Bypass -File create_shortcut.ps1 -StartMenu  # + sta
 
 ## Menu and controls
 
-Click **Menü** in the top-right corner or press `M`. All settings can be changed while the game
-is running. The menu is in German.
+Click **Menu** in the top-right corner or press `M`. All settings can be changed while the game
+is running. The interface is available in English and German. It follows your system language,
+and you can switch it in the menu (**Language**) or with `--lang en` / `--lang de`.
 
 ![In-game menu and info overlay](pics/menu.png)
 
@@ -110,8 +111,9 @@ All options are optional and only set the starting values:
 | `--grid 4000x4000` | field size in cells, overrides `--cell` | screen resolution / cell size |
 | `--window 1600x900` | start in a window instead of fullscreen | fullscreen |
 | `--screen 1` | which monitor to use | primary |
-| `--theme glut` | `neon`, `glut`, `matrix`, `pastell`, `klassik` | `neon` |
-| `--view kacheln` | `einzeln` or `kacheln` | `einzeln` |
+| `--theme ember` | `neon`, `ember`, `matrix`, `pastel`, `classic` | `neon` |
+| `--view tiles` | `single` or `tiles` | `single` |
+| `--lang en` | interface language: `en` or `de` | system language |
 | `--hud` | show the info overlay at start | off |
 | `--seed 42` | random seed for reproducible fields | random |
 
@@ -136,7 +138,8 @@ On small fields the limit is the Python call per generation, not the GPU.
 | `hashlife.py` | HashLife engine (hash-consed quadtree, memoised `successor`), RLE parser, built-in patterns |
 | `life.py` | numpy reference implementation, used to seed the field and as ground truth in the tests |
 | `ui.py` | the clickable in-game menu |
-| `tests/` | rules, GPU vs. numpy (word borders, torus edges), HashLife vs. numpy, known pattern facts |
+| `i18n.py` | interface texts in English and German |
+| `tests/` | rules, GPU vs. numpy (word borders, torus edges), HashLife vs. numpy, known pattern facts, translations |
 
 Run the tests with `pytest`.
 

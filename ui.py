@@ -77,7 +77,7 @@ class Menu:
     GAP = 6
     MARGIN = 12
 
-    def __init__(self, title: str, rows):
+    def __init__(self, title: str, rows, opener_text: str = "Menu (M)"):
         """rows: list of (row label or None, [items])."""
         self.batch = Batch()
         bg, mid, fg = Group(0), Group(1), Group(2)
@@ -97,7 +97,7 @@ class Menu:
 
         # small button shown in the corner while the menu is closed
         self.opener_batch = Batch()
-        self.opener = _Widget(button("Menü (M)", self.show), self.opener_batch, Group(1), Group(2))
+        self.opener = _Widget(button(opener_text, self.show), self.opener_batch, Group(1), Group(2))
         self.opener.rect.color = COL_PANEL
 
     # --- visibility ------------------------------------------------------------------------
