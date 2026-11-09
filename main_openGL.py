@@ -1,3 +1,4 @@
+import os
 import random
 import numpy as np
 import pyglet
@@ -6,6 +7,7 @@ from pyglet.gl import *
 class main_application(pyglet.window.Window):
     def __init__(self, width, height):
         super().__init__(caption='Game_of_Life', width=width, height=height)
+        self.set_icon(pyglet.image.load(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'icon.png')))
 
         self.height = height
         self.width = width
